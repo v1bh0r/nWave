@@ -57,6 +57,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Current public version for nwave-ai stage",
     )
     parser.add_argument(
+        "--base-version",
+        default="",
+        help="Base version from Commitizen (e.g. 1.2.0). Overrides _bump_patch when non-empty.",
+    )
+    parser.add_argument(
+        "--version-floor",
+        default="",
+        help="Minimum version floor for dev stage. Uses max(floor, resolved_base) when non-empty.",
+    )
+    parser.add_argument(
         "--no-bump",
         action="store_true",
         help="Signal that no conventional commits require a bump",
@@ -136,12 +146,26 @@ def _highest_counter(tag_versions: list[Version], base: str, suffix_type: str) -
 
 
 def calculate_dev(
-    current_version: Version, existing_tags: list[Version], no_bump: bool
+    current_version: Version,
+    existing_tags: list[Version],
+    no_bump: bool,
+    base_version: str = "",
+    version_floor: str = "",
 ) -> None:
     if no_bump:
         _error_exit("No version bump needed.", code=1)
 
-    base = _bump_patch(current_version)
+    if base_version and base_version.strip():
+        base = base_version.strip()
+    else:
+        base = _bump_patch(current_version)
+
+    if version_floor and version_floor.strip():
+        floor_v = Version(version_floor.strip())
+        base_v = Version(base)
+        if floor_v > base_v:
+            base = str(floor_v)
+
     highest = _highest_counter(existing_tags, base, "dev")
     next_dev = highest + 1
     version_str = f"{base}.dev{next_dev}"
@@ -200,7 +224,15 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.stage == "dev":
         current_v = _validate_version(args.current_version, "current-version")
-        calculate_dev(current_v, tag_versions, args.no_bump)
+        base_version = args.base_version.strip() if args.base_version else ""
+        if base_version:
+            _validate_version(base_version, "base-version")
+        version_floor = args.version_floor.strip() if args.version_floor else ""
+        if version_floor:
+            _validate_version(version_floor, "version-floor")
+        calculate_dev(
+            current_v, tag_versions, args.no_bump, base_version, version_floor
+        )
     elif args.stage == "rc":
         calculate_rc(args.current_version, tag_versions)
     elif args.stage == "stable":
