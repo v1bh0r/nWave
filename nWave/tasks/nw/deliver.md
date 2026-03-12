@@ -84,10 +84,11 @@ INPUT: "{feature-description}"
   |
   0.5. Prior Wave Consultation (see section above)
      Read DISTILL (all) + DESIGN (architecture + boundaries + wave-decisions)|flag contradictions|resolve before proceeding
+     Summarize key design decisions into a reusable DESIGN_CONTEXT block for crafter dispatch (component structure, boundaries, tech choices, data models). This summary is injected into every crafter's DES template so sub-agents make implementation decisions aligned with the architecture.
   |
   1. Parse input|derive feature-id (kebab-case)|create docs/feature/{feature-id}/deliver/
      a. Create execution-log.json if missing via CLI:
-        python -m des.cli.init_log --project-dir docs/feature/{feature-id}/deliver --feature-id {feature-id}
+        PYTHONPATH=$HOME/.claude/lib/python $(command -v python3 || command -v python) -m des.cli.init_log --project-dir docs/feature/{feature-id}/deliver --feature-id {feature-id}
         Do NOT create execution-log.json directly with Write — use the CLI only.
      b. Create deliver session marker: .nwave/des/deliver-session.json
   |
@@ -125,7 +126,7 @@ INPUT: "{feature-description}"
      c. {selected-crafter} executes 5-phase TDD cycle (read ~/.claude/commands/nw/execute.md)
         Use crafter from step 1.5|@nw-functional-software-crafter → PBT default|@property tags signal PBT
         IMPORTANT: Use DES Prompt Template from execute.md|Include DES markers (DES-VALIDATION|DES-PROJECT-ID|DES-STEP-ID) + all mandatory sections
-        OUTCOME_RECORDING: agents use DES CLI (python -m des.cli.log_phase)|CLI bypass → SubagentStop hook corrects timestamps
+        OUTCOME_RECORDING: agents use DES CLI (PYTHONPATH=$HOME/.claude/lib/python $(command -v python3 || command -v python) -m des.cli.log_phase)|CLI bypass → SubagentStop hook corrects timestamps
      d. Verify COMMIT/PASS in execution-log.json per step
      e. Missing phase → RE-DISPATCH agent. NEVER write entries yourself.
      f. Stop on first failure
@@ -163,7 +164,7 @@ INPUT: "{feature-description}"
      disabled → SKIP|log "disabled per project configuration"
   |
   7. Phase 6 — Deliver Integrity Verification
-     a. PYTHONPATH=$HOME/.claude/lib/python python -m des.cli.verify_deliver_integrity docs/feature/{feature-id}/deliver/
+     a. PYTHONPATH=$HOME/.claude/lib/python $(command -v python3 || command -v python) -m des.cli.verify_deliver_integrity docs/feature/{feature-id}/deliver/
      b. Exit 0 → proceed|Exit 1 → STOP, read output
      c. No entries = not executed through DES|Partial = incomplete TDD
      d. Violations → re-execute via Task with DES markers|Only proceed after pass
@@ -223,6 +224,13 @@ Load on-demand per phase as specified in your Skill Loading Strategy table.
 
 # TASK_CONTEXT
 {step context extracted from roadmap - name|description|acceptance_criteria|test_file|scenario_name|quality_gates|implementation_notes|dependencies|estimated_hours|deliverables}
+
+# DESIGN_CONTEXT
+{Summarize key architectural decisions from design wave artifacts read at step 0.5.
+Include: component structure, dependency-inversion boundaries, technology choices,
+data models, and any design constraints relevant to this step.
+Source files: architecture-design.md, component-boundaries.md, wave-decisions.md.
+If no design artifacts exist, write "No design artifacts available — use project conventions."}
 
 # TDD_PHASES
 ... (copy remaining sections from execute.md template verbatim)

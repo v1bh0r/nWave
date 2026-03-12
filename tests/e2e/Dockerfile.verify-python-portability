@@ -1,0 +1,185 @@
+# Dockerfile.verify-python-portability
+#
+# Validates that the DES CLI portable Python pattern works across environments:
+#   $(command -v python3 || command -v python)
+#
+# Simulates three environments:
+#   1. macOS Homebrew — only python3 available (no python)
+#   2. Windows-like   — only python available (no python3)
+#   3. Linux standard — both python and python3 available
+#
+# Usage:
+#   docker build --no-cache \
+#     -f tests/e2e/Dockerfile.verify-python-portability \
+#     -t nwave-verify-python . && docker run --rm nwave-verify-python
+#
+# Expected: all 3 scenarios print PASS, exit 0.
+
+FROM python:3.12-slim
+
+RUN pip install --no-cache-dir pyyaml
+
+WORKDIR /workspace
+COPY nWave/tasks/nw/execute.md /workspace/templates/execute.md
+COPY nWave/tasks/nw/deliver.md /workspace/templates/deliver.md
+COPY nWave/tasks/nw/roadmap.md /workspace/templates/roadmap.md
+
+# Create a minimal des.cli module so we can test actual invocation
+RUN mkdir -p /workspace/lib/des/cli && \
+    echo '"""DES CLI package."""' > /workspace/lib/des/__init__.py && \
+    echo '"""DES CLI subpackage."""' > /workspace/lib/des/cli/__init__.py && \
+    echo 'import sys; print(f"log_phase OK (Python {sys.version})")' > /workspace/lib/des/cli/log_phase.py && \
+    echo 'import sys; print(f"init_log OK (Python {sys.version})")' > /workspace/lib/des/cli/init_log.py && \
+    echo 'import sys; print(f"verify_deliver_integrity OK (Python {sys.version})")' > /workspace/lib/des/cli/verify_deliver_integrity.py && \
+    echo 'import sys; print(f"roadmap OK (Python {sys.version})")' > /workspace/lib/des/cli/roadmap.py
+
+# Test script that runs all 3 scenarios
+COPY <<'TESTSCRIPT' /workspace/test_portability.sh
+#!/bin/bash
+set -e
+
+PASS=0
+FAIL=0
+ERRORS=""
+
+run_test() {
+    local scenario="$1"
+    local setup_cmd="$2"
+    local teardown_cmd="$3"
+
+    echo ""
+    echo "=== Scenario: $scenario ==="
+
+    # Setup: modify PATH to simulate environment
+    eval "$setup_cmd" 2>/dev/null || true
+
+    # Test: resolve Python using the portable pattern
+    local resolved
+    resolved=$(command -v python3 || command -v python || echo "NONE")
+
+    if [ "$resolved" = "NONE" ]; then
+        echo "  FAIL: No Python found"
+        FAIL=$((FAIL + 1))
+        ERRORS="$ERRORS\n  - $scenario: no Python interpreter found"
+        eval "$teardown_cmd" 2>/dev/null || true
+        return
+    fi
+
+    echo "  Resolved interpreter: $resolved"
+
+    # Test: can the resolved Python run a des.cli module?
+    if PYTHONPATH=/workspace/lib "$resolved" -m des.cli.log_phase 2>&1; then
+        echo "  PASS: des.cli.log_phase works"
+        PASS=$((PASS + 1))
+    else
+        echo "  FAIL: des.cli.log_phase failed"
+        FAIL=$((FAIL + 1))
+        ERRORS="$ERRORS\n  - $scenario: des.cli.log_phase invocation failed"
+    fi
+
+    # Teardown
+    eval "$teardown_cmd" 2>/dev/null || true
+}
+
+# Record original state
+ORIGINAL_PYTHON3=$(command -v python3 || echo "")
+ORIGINAL_PYTHON=$(command -v python || echo "")
+
+echo "System state:"
+echo "  python3: ${ORIGINAL_PYTHON3:-not found}"
+echo "  python:  ${ORIGINAL_PYTHON:-not found}"
+
+# ─────────────────────────────────────────────
+# Scenario 1: macOS-like (only python3)
+# ─────────────────────────────────────────────
+# Remove python symlink if it exists, keep python3
+if [ -n "$ORIGINAL_PYTHON" ] && [ -f "$ORIGINAL_PYTHON" ]; then
+    cp "$ORIGINAL_PYTHON" /tmp/python_backup
+fi
+
+run_test \
+    "macOS Homebrew (python3 only)" \
+    "rm -f /usr/local/bin/python 2>/dev/null; hash -r" \
+    "true"
+
+# ─────────────────────────────────────────────
+# Scenario 2: Windows-like (only python)
+# ─────────────────────────────────────────────
+# Copy python3 binary as 'python', then hide python3
+if [ -n "$ORIGINAL_PYTHON3" ] && [ -f "$ORIGINAL_PYTHON3" ]; then
+    cp "$ORIGINAL_PYTHON3" /tmp/python3_backup
+    # Copy binary (not symlink!) so it survives python3 rename
+    cp "$ORIGINAL_PYTHON3" /usr/local/bin/python
+    # Temporarily hide python3 by renaming
+    mv "$ORIGINAL_PYTHON3" "${ORIGINAL_PYTHON3}.hidden"
+    hash -r
+fi
+
+run_test \
+    "Windows-like (python only)" \
+    "true" \
+    "true"
+
+# Restore python3
+if [ -f "${ORIGINAL_PYTHON3}.hidden" ]; then
+    mv "${ORIGINAL_PYTHON3}.hidden" "$ORIGINAL_PYTHON3"
+    hash -r
+fi
+
+# ─────────────────────────────────────────────
+# Scenario 3: Linux standard (both available)
+# ─────────────────────────────────────────────
+# Ensure both exist
+ln -sf "$ORIGINAL_PYTHON3" /usr/local/bin/python 2>/dev/null || true
+hash -r
+
+run_test \
+    "Linux standard (both python3 and python)" \
+    "true" \
+    "true"
+
+# ─────────────────────────────────────────────
+# Scenario 4: Template content validation
+# ─────────────────────────────────────────────
+echo ""
+echo "=== Scenario: Template content validation ==="
+
+TEMPLATE_ERRORS=0
+for tmpl in /workspace/templates/*.md; do
+    name=$(basename "$tmpl")
+    # Check for bare python/python3 in des.cli invocations
+    if grep -P '(?<!\$\(command -v )(?<!\|\| command -v )\bpython[3]?\s+-m\s+des\.cli\b' "$tmpl" 2>/dev/null; then
+        echo "  FAIL: $name contains bare python/python3 in DES CLI command"
+        TEMPLATE_ERRORS=$((TEMPLATE_ERRORS + 1))
+    fi
+done
+
+if [ "$TEMPLATE_ERRORS" -eq 0 ]; then
+    echo "  PASS: All templates use portable Python pattern"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: $TEMPLATE_ERRORS template(s) have bare python references"
+    FAIL=$((FAIL + 1))
+    ERRORS="$ERRORS\n  - Template validation: $TEMPLATE_ERRORS file(s) with bare python"
+fi
+
+# ─────────────────────────────────────────────
+# Summary
+# ─────────────────────────────────────────────
+echo ""
+echo "==============================="
+echo "Results: $PASS passed, $FAIL failed"
+echo "==============================="
+
+if [ "$FAIL" -gt 0 ]; then
+    echo -e "Failures:$ERRORS"
+    exit 1
+fi
+
+echo "All Python portability checks passed!"
+exit 0
+TESTSCRIPT
+
+RUN chmod +x /workspace/test_portability.sh
+
+CMD ["/bin/bash", "/workspace/test_portability.sh"]

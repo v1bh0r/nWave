@@ -35,7 +35,7 @@ You MUST execute these steps in order. Do NOT skip any.
 **Step 2 — Scaffold skeleton via CLI (mandatory, BEFORE invoking agent):**
 
 ```bash
-PYTHONPATH=~/.claude/lib/python python3 -m des.cli.roadmap init \
+PYTHONPATH=~/.claude/lib/python $(command -v python3 || command -v python) -m des.cli.roadmap init \
   --project-id {feature-id} \
   --goal "{goal-description}" \
   --output docs/feature/{feature-id}/deliver/roadmap.json
@@ -63,7 +63,7 @@ Context to pass (if available): measurement baseline|mikado-graph.md|existing do
 **Step 4 — Validate via CLI (hard gate, mandatory):**
 
 ```bash
-PYTHONPATH=~/.claude/lib/python python3 -m des.cli.roadmap validate docs/feature/{feature-id}/deliver/roadmap.json
+PYTHONPATH=~/.claude/lib/python $(command -v python3 || command -v python) -m des.cli.roadmap validate docs/feature/{feature-id}/deliver/roadmap.json
 ```
 - Exit 0 -> success, roadmap ready
 - Exit 1 -> print errors, STOP, do NOT proceed

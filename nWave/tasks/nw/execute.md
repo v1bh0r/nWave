@@ -66,6 +66,9 @@ Load on-demand per phase as specified in your Skill Loading Strategy table.
 # TASK_CONTEXT
 {step context from roadmap - name|description|acceptance_criteria|test_file|scenario_name|quality_gates|implementation_notes|dependencies|estimated_hours|deliverables}
 
+# DESIGN_CONTEXT
+{Summary of architectural decisions relevant to this step, extracted by the orchestrator from design wave artifacts (architecture-design.md, component-boundaries.md, wave-decisions.md). Include: component structure, dependency boundaries, technology choices, and any design constraints that affect implementation. If no design artifacts exist, write "No design artifacts available — use project conventions."}
+
 # TDD_PHASES
 Execute in order:
 0. PREPARE - Load context, verify prerequisites
@@ -104,7 +107,7 @@ Execute in order:
 # OUTCOME_RECORDING
 After ACTUALLY EXECUTING each phase, record via DES CLI:
 
-    PYTHONPATH=$HOME/.claude/lib/python python -m des.cli.log_phase \
+    PYTHONPATH=$HOME/.claude/lib/python $(command -v python3 || command -v python) -m des.cli.log_phase \
       --project-dir docs/feature/{feature-id}/deliver \
       --step-id {step-id} \
       --phase {PHASE_NAME} \
@@ -113,7 +116,7 @@ After ACTUALLY EXECUTING each phase, record via DES CLI:
 
 For SKIPPED phases (genuinely not applicable):
 
-    PYTHONPATH=$HOME/.claude/lib/python python -m des.cli.log_phase \
+    PYTHONPATH=$HOME/.claude/lib/python $(command -v python3 || command -v python) -m des.cli.log_phase \
       --project-dir docs/feature/{feature-id}/deliver \
       --step-id {step-id} \
       --phase {PHASE_NAME} \
@@ -122,8 +125,8 @@ For SKIPPED phases (genuinely not applicable):
 
 CLI enforces real UTC timestamps and validates phase names.
 Do NOT manually edit execution-log.json.
-Use `python -m des.cli.log_phase` to record phase outcomes.
-Use `python -m des.cli.init_log` to create the file if missing.
+Use the DES CLI to record phase outcomes and create log files.
+Python resolution: `$(command -v python3 || command -v python)` — works on macOS (python3 only), Linux, and Windows.
 
 CRITICAL: Only the executing agent calls the CLI.
 Orchestrator MUST NEVER write phase entries — only the agent that performed the work. A log entry without actual execution is a **violation that DES detects and that will cause integrity verification to fail**, blocking finalize.
