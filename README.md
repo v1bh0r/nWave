@@ -6,6 +6,9 @@ nWave runs inside [Claude Code](https://claude.com/product/claude-code). You des
 
 ## Quick Start
 
+### Requirements
+Certain functionality in the plugin's python modules requires that the global python version is at least 3.10
+
 ### Plugin (Recommended)
 
 From Claude Code, run:
