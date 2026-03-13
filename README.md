@@ -7,7 +7,8 @@ nWave runs inside [Claude Code](https://claude.com/product/claude-code). You des
 ## Quick Start
 
 ### Requirements
-Certain functionality in the plugin's python modules requires that the global python version is at least 3.10
+
+- **Python 3.10+** — nWave's DES hooks use `match/case` statements and `X | Y` union type syntax introduced in Python 3.10. Verify with `python3 --version`.
 
 ### Plugin (Recommended)
 

@@ -45,7 +45,7 @@ In subagent mode (Task tool invocation with 'execute'/'TASK BOUNDARY'), skip gre
 5. **Problem-first, solution-never**|Start every story from user pain in domain language|Never prescribe technical solutions -- that belongs in DESIGN wave
 6. **Concrete examples over abstract rules**|Every requirement needs 3+ domain examples with real names/data (Maria Santos, not user123)|Abstract statements hide decisions; examples force them
 7. **DoR is a hard gate**|Stories pass all 8 DoR items before DESIGN wave|No exceptions, no partial handoffs
-8. **Right-sized stories**|1-3 days effort|3-7 UAT scenarios|Demonstrable in single session|Oversized → split by user outcome
+8. **Right-sized stories (Elephant Carpaccio)**|1-3 days effort|3-7 UAT scenarios|Demonstrable in single session|Oversized → split into thin end-to-end slices by user outcome, not by technical layer. Each slice delivers a working behavior the user can verify. Prefer 10 tiny deliverables over 1 big one. If a feature touches >3 bounded contexts or needs >10 stories, flag it as oversized and propose splitting into independent deliverables before proceeding.
 
 ## Workflow
 
@@ -80,6 +80,28 @@ Load: `user-story-mapping` — read it NOW before mapping.
 - Produce `docs/feature/{feature-id}/discuss/story-map.md`
 - Produce `docs/feature/{feature-id}/discuss/prioritization.md`
 - Gate: story map has backbone|walking skeleton identified|releases sliced by outcome
+
+### Phase 2.7: Scope Assessment (Elephant Carpaccio Gate)
+
+Before coherence validation, assess whether the feature scope is right-sized for a single delivery cycle:
+
+**Oversized signals** (any 2+ = flag to user):
+- Story map has >10 user stories
+- Stories span >3 bounded contexts or modules
+- Walking skeleton requires >5 integration points
+- Estimated total effort >2 weeks
+- Multiple independent user outcomes that could ship separately
+
+**When oversized**: Do NOT proceed. Instead:
+1. Propose splitting into independent deliverables, each a thin end-to-end slice (Elephant Carpaccio)
+2. Each slice must deliver a working behavior the user can verify — not a technical layer
+3. Suggest a delivery sequence where each slice builds on the previous
+4. Ask the user to confirm the splitting before continuing to Phase 3
+5. If user agrees, create separate feature directories for each deliverable
+
+**When right-sized**: Note in story-map.md: `## Scope Assessment: PASS — {N} stories, {M} contexts, estimated {X} days`
+
+- Gate: scope assessed|right-sized OR user-approved split
 
 ### Phase 3: Coherence Validation
 
@@ -128,6 +150,7 @@ Load on-demand by phase, not all at once:
 | 1 Discovery | discovery-methodology | jtbd-workflow-selection, jtbd-core, jtbd-interviews, jtbd-opportunity-scoring | User requests JTBD or competing jobs |
 | 2 Visualization | design-methodology, shared-artifact-tracking | persona-jtbd-analysis, ux-emotional-design | Persona creation / emotional depth |
 | 2.5 Story Mapping | user-story-mapping | — | — |
+| 2.7 Scope Assessment | — | — | Automatic (Elephant Carpaccio gate) |
 | 3 Coherence | — | — | — |
 | 4 Requirements | leanux-methodology, bdd-requirements, outcome-kpi-framework | jtbd-bdd-integration, ux-web/desktop/tui-patterns, ux-principles | JTBD done / Target platform |
 | 5 Validation | review-dimensions | — | — |

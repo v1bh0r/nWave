@@ -62,7 +62,7 @@ class TestNoBareInterpreterInTemplates:
                 violations.append(f"  {filename}:{i}: {line.strip()}")
 
         assert not violations, (
-            f"Found bare python/python3 in DES CLI invocations (use portable pattern instead):\n"
+            "Found bare python/python3 in DES CLI invocations (use portable pattern instead):\n"
             + "\n".join(violations)
             + f"\n\nRequired pattern: {PORTABLE_PATTERN}"
         )
@@ -89,7 +89,7 @@ class TestNoBareInterpreterInTemplates:
                 missing_portable.append(f"  {filename}:{lineno}: {stripped}")
 
         assert not missing_portable, (
-            f"DES CLI invocations missing portable Python pattern:\n"
+            "DES CLI invocations missing portable Python pattern:\n"
             + "\n".join(missing_portable)
             + f"\n\nRequired: {PORTABLE_PATTERN}"
         )
@@ -114,9 +114,9 @@ class TestNoBareInterpreterInTemplates:
                 missing_path.append(f"  {filename}:{lineno}: {stripped}")
 
         assert not missing_path, (
-            f"DES CLI invocations missing PYTHONPATH prefix:\n"
+            "DES CLI invocations missing PYTHONPATH prefix:\n"
             + "\n".join(missing_path)
-            + f"\n\nRequired: PYTHONPATH=$HOME/.claude/lib/python"
+            + "\n\nRequired: PYTHONPATH=$HOME/.claude/lib/python"
         )
 
 
@@ -179,7 +179,7 @@ class TestNoHardcodedPythonAnywhere:
                     all_violations.append(f"  {md_file.name}:{i}: {line.strip()}")
 
         assert not all_violations, (
-            f"Found bare python/python3 in DES CLI invocations:\n"
+            "Found bare python/python3 in DES CLI invocations:\n"
             + "\n".join(all_violations)
             + f"\n\nUse: {PORTABLE_PATTERN}"
         )

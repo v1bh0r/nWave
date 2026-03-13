@@ -126,6 +126,8 @@ Before beginning DEVOPS work, read targeted prior wave artifacts:
 
 DESIGN is the direct predecessor and synthesis point — its architecture decisions, component boundaries, and tech stack are the primary input for infrastructure design. Reading DISCOVER or full DISCUSS would duplicate what DESIGN already encoded.
 
+**READING ENFORCEMENT**: You MUST read every file listed in Prior Wave Consultation above using the Read tool before proceeding. After reading, output a confirmation checklist (`✓ {file}` for each read, `⊘ {file} (not found)` for missing). Do NOT skip files that exist — skipping causes infrastructure decisions disconnected from architecture.
+
 After reading, check whether any DEVOPS decisions would contradict DESIGN architecture. Flag contradictions and resolve with user before proceeding. Example: DESIGN specifies "single-region deployment" but DEVOPS discovers latency requirements from outcome-kpis.md that demand multi-region — this must be resolved.
 
 ## Document Update (Back-Propagation)
