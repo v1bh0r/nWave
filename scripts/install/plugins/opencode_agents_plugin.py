@@ -112,6 +112,21 @@ def _transform_frontmatter(frontmatter: dict) -> dict:
     return result
 
 
+def _rewrite_skill_paths(body: str) -> str:
+    """Rewrite Claude Code skill paths to OpenCode paths in agent body.
+
+    Agent markdown bodies contain hardcoded ~/.claude/skills/ paths that must
+    be rewritten to ~/.config/opencode/skills/ for OpenCode compatibility.
+
+    Args:
+        body: Agent body text (everything after the frontmatter)
+
+    Returns:
+        Body with all skill path references rewritten for OpenCode
+    """
+    return body.replace("~/.claude/skills/", "~/.config/opencode/skills/")
+
+
 def _transform_agent(content: str) -> str:
     """Full transformation pipeline: parse, transform, render with body.
 
@@ -124,6 +139,7 @@ def _transform_agent(content: str) -> str:
     frontmatter, body = parse_frontmatter(content)
     transformed = _transform_frontmatter(frontmatter)
     rendered = render_frontmatter(transformed)
+    body = _rewrite_skill_paths(body)
     return rendered + body
 
 

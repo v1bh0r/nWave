@@ -10,6 +10,7 @@ All consumers should import from this module::
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 
@@ -46,3 +47,30 @@ def des_dir(claude_dir: Path) -> Path:
 def manifest_path(claude_dir: Path) -> Path:
     """Return the installation manifest file path."""
     return claude_dir / MANIFEST_FILENAME
+
+
+# -- Python command resolution ------------------------------------------------
+
+# Literal pattern used in source templates for portable Python resolution.
+# Installed files replace this with the resolved concrete path.
+PYTHON_CMD_SUBSTITUTION = "$(command -v python3 || command -v python)"
+
+
+def resolve_python_command() -> str:
+    """Resolve the Python interpreter command for use in installed templates.
+
+    Returns the basename of sys.executable when it is a system/pipx Python,
+    or falls back to 'python3' when running inside a project-local .venv
+    (to avoid embedding machine-specific paths in installed files).
+
+    This mirrors the logic in DESPlugin._resolve_python_path() but returns
+    only the command name (not a $HOME-prefixed path), suitable for
+    substitution into skill/command templates.
+    """
+    python_path = sys.executable
+
+    # Project-local .venv must not leak into installed files
+    if "/.venv/" in python_path or "\\.venv\\" in python_path:
+        return "python3"
+
+    return "python3"

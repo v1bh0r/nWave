@@ -28,6 +28,10 @@ from scripts.shared.agent_catalog import (
     detect_command_skills,
     load_public_agents,
 )
+from scripts.shared.install_paths import (
+    PYTHON_CMD_SUBSTITUTION,
+    resolve_python_command,
+)
 from scripts.shared.skill_distribution import (
     SourceLayout,
     cleanup_legacy_namespace,
@@ -66,6 +70,30 @@ def _skill_group_emoji(group_name: str) -> str:
     """
     base = group_name.removesuffix("-reviewer")
     return _SKILL_GROUP_EMOJIS.get(base, "\U0001f4e6")
+
+
+def _substitute_python_in_installed_files(
+    skills_target: Path,
+    entries: list,
+    python_cmd: str,
+) -> None:
+    """Replace $(command -v ...) pattern with resolved Python command in installed files.
+
+    Only modifies .md files that contain the substitution pattern.
+    Source files are never modified -- only the installed copies.
+
+    Args:
+        skills_target: Target directory where skills were installed
+        entries: List of SkillEntry items that were installed
+        python_cmd: Resolved Python command (e.g. 'python3')
+    """
+    for entry in entries:
+        target_dir = skills_target / entry.name
+        for md_file in target_dir.rglob("*.md"):
+            content = md_file.read_text(encoding="utf-8")
+            if PYTHON_CMD_SUBSTITUTION in content:
+                content = content.replace(PYTHON_CMD_SUBSTITUTION, python_cmd)
+                md_file.write_text(content, encoding="utf-8")
 
 
 class SkillsPlugin(InstallationPlugin):
@@ -187,6 +215,10 @@ class SkillsPlugin(InstallationPlugin):
             entries, public_agents, ownership_map, command_skills
         )
         copy_skills_to_target(entries, skills_target, clean_existing=True)
+
+        # Resolve Python command substitution in installed files
+        python_cmd = resolve_python_command()
+        _substitute_python_in_installed_files(skills_target, entries, python_cmd)
 
         # Collect installed files for reporting
         installed_files: list[Path] = []

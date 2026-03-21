@@ -1,0 +1,223 @@
+FROM python:3.12-slim
+
+# Install pipx, Node.js, git
+RUN pip install --no-cache-dir pipx && \
+    pipx ensurepath && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends curl git && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install OpenCode (needed for OpenCode verification)
+RUN npm install -g opencode-ai
+
+# Create test user
+RUN useradd -m -s /bin/bash tester
+USER tester
+WORKDIR /home/tester
+
+# Install nwave-ai RC
+RUN pipx install "nwave-ai==3.1.0rc2"
+
+# Configure OpenCode
+RUN mkdir -p /home/tester/.config/opencode && \
+    echo '{"model": "openai/gpt-4o-mini"}' > /home/tester/.config/opencode/opencode.json
+
+COPY --chown=tester:tester <<'VERIFY' /home/tester/verify.sh
+#!/bin/bash
+PASS=0
+FAIL=0
+WARN=0
+
+echo "=============================================="
+echo "  nWave v3.1.0rc2 Full Verification"
+echo "  Claude Code + OpenCode + DES Hooks"
+echo "=============================================="
+echo ""
+
+# ──────────────────────────────────────────────
+# 1. Install
+# ──────────────────────────────────────────────
+echo "[1/15] Running nwave-ai install..."
+OUTPUT=$(~/.local/bin/nwave-ai install 2>&1)
+EXIT=$?
+echo "$OUTPUT" | grep -E "✅|❌|🍾" | tail -5
+if [ $EXIT -eq 0 ]; then ((PASS++)); echo "  PASS: Install"; else ((FAIL++)); echo "  FAIL: Install (exit $EXIT)"; fi
+
+# ──────────────────────────────────────────────
+# 2. Claude Code: command-skills
+# ──────────────────────────────────────────────
+echo ""
+echo "[2/15] CC: command-skills..."
+CC_OK=0
+for cmd in nw-deliver nw-design nw-discuss nw-distill nw-execute nw-review; do
+    [ -f "$HOME/.claude/skills/$cmd/SKILL.md" ] && ((CC_OK++))
+done
+if [ $CC_OK -eq 6 ]; then ((PASS++)); echo "  PASS: $CC_OK/6 commands"; else ((FAIL++)); echo "  FAIL: $CC_OK/6 commands"; fi
+
+# ──────────────────────────────────────────────
+# 3. CC: DES hooks
+# ──────────────────────────────────────────────
+echo ""
+echo "[3/15] CC: DES hooks..."
+if [ -f "$HOME/.claude/settings.json" ]; then
+    HOOKS=$(python3 -c "import json; print(len(json.load(open('$HOME/.claude/settings.json')).get('hooks',{})))" 2>/dev/null || echo 0)
+    if [ "$HOOKS" -ge 4 ]; then ((PASS++)); echo "  PASS: $HOOKS hook events"; else ((FAIL++)); echo "  FAIL: $HOOKS hooks"; fi
+else
+    ((FAIL++)); echo "  FAIL: settings.json missing"
+fi
+
+# ──────────────────────────────────────────────
+# 4. CC: No private agents
+# ──────────────────────────────────────────────
+echo ""
+echo "[4/15] CC: no private agents..."
+PRIV=$(ls "$HOME/.claude/agents/nw/" 2>/dev/null | grep -iE "osint|business-discoverer|deal-closer|outreach|workshopper|tutorialist|ux-designer" || true)
+if [ -z "$PRIV" ]; then ((PASS++)); echo "  PASS: 0 private"; else ((FAIL++)); echo "  FAIL: $PRIV"; fi
+
+# ──────────────────────────────────────────────
+# 5. CC: Skill loading reinforcement
+# ──────────────────────────────────────────────
+echo ""
+echo "[5/15] CC: skill loading reinforced..."
+AGENT="$HOME/.claude/agents/nw/nw-software-crafter.md"
+if [ -f "$AGENT" ] && grep -q "Read these files NOW" "$AGENT"; then
+    ((PASS++)); echo "  PASS: literal paths in agent def"
+else
+    ((FAIL++)); echo "  FAIL: old template style"
+fi
+
+# ──────────────────────────────────────────────
+# 6. #23: files_to_modify
+# ──────────────────────────────────────────────
+echo ""
+echo "[6/15] #23: files_to_modify in TASK_CONTEXT..."
+if grep -q "files_to_modify" "$HOME/.claude/skills/nw-execute/SKILL.md" 2>/dev/null; then
+    ((PASS++)); echo "  PASS"
+else
+    ((FAIL++)); echo "  FAIL"
+fi
+
+# ──────────────────────────────────────────────
+# 7. #26: UTF-8 encoding
+# ──────────────────────────────────────────────
+echo ""
+echo "[7/15] #26: UTF-8 encoding..."
+ERR=0
+for f in $(find "$HOME/.claude/skills" "$HOME/.claude/agents" -name "*.md" 2>/dev/null); do
+    python3 -c "open('$f', encoding='utf-8').read()" 2>/dev/null || ((ERR++))
+done
+if [ $ERR -eq 0 ]; then ((PASS++)); echo "  PASS: all UTF-8 clean"; else ((FAIL++)); echo "  FAIL: $ERR errors"; fi
+
+# ──────────────────────────────────────────────
+# 8. No stale command paths
+# ──────────────────────────────────────────────
+echo ""
+echo "[8/15] No stale paths in DES..."
+DES="$HOME/.claude/lib/python/des"
+if [ -d "$DES" ]; then
+    STALE=$(grep -rn "commands/nw/" "$DES" --include="*.py" 2>/dev/null | grep -v "^#" || true)
+    if [ -z "$STALE" ]; then ((PASS++)); echo "  PASS"; else ((FAIL++)); echo "  FAIL: $STALE"; fi
+else
+    ((WARN++)); echo "  WARN: DES not installed"
+fi
+
+# ──────────────────────────────────────────────
+# 9. OpenCode: skills
+# ──────────────────────────────────────────────
+echo ""
+echo "[9/15] OC: skills..."
+OC_S=$(ls "$HOME/.config/opencode/skills/" 2>/dev/null | wc -l)
+if [ "$OC_S" -gt 0 ]; then ((PASS++)); echo "  PASS: $OC_S skills"; else ((FAIL++)); echo "  FAIL: 0 skills"; fi
+
+# ──────────────────────────────────────────────
+# 10. OpenCode: agents (no private)
+# ──────────────────────────────────────────────
+echo ""
+echo "[10/15] OC: agents..."
+OC_A=$(ls "$HOME/.config/opencode/agents/" 2>/dev/null | wc -l)
+OC_PRIV=$(ls "$HOME/.config/opencode/agents/" 2>/dev/null | grep -iE "osint|business|deal|outreach" || true)
+if [ "$OC_A" -gt 0 ] && [ -z "$OC_PRIV" ]; then ((PASS++)); echo "  PASS: $OC_A agents, 0 private"; else ((FAIL++)); echo "  FAIL"; fi
+
+# ──────────────────────────────────────────────
+# 11. OpenCode: commands
+# ──────────────────────────────────────────────
+echo ""
+echo "[11/15] OC: commands..."
+OC_C=$(find "$HOME/.config/opencode/commands" -name "*.md" 2>/dev/null | wc -l)
+if [ "$OC_C" -gt 0 ]; then ((PASS++)); echo "  PASS: $OC_C commands"; else ((FAIL++)); echo "  FAIL: 0 commands"; fi
+
+# ──────────────────────────────────────────────
+# 12. NEW: OpenCode DES shim installed
+# ──────────────────────────────────────────────
+echo ""
+echo "[12/15] OC: DES shim installed..."
+SHIM="$HOME/.config/opencode/plugins/nwave-des.ts"
+if [ -f "$SHIM" ]; then
+    ((PASS++)); echo "  PASS: nwave-des.ts exists"
+    # Verify content
+    if grep -q "tool.execute.before" "$SHIM" && grep -q "des.adapters.drivers.hooks" "$SHIM"; then
+        echo "    OK: hooks + adapter reference present"
+    else
+        echo "    WARN: shim content may be incomplete"
+    fi
+else
+    ((FAIL++)); echo "  FAIL: nwave-des.ts NOT found"
+fi
+
+# ──────────────────────────────────────────────
+# 13. NEW: DES shim has protocol translation
+# ──────────────────────────────────────────────
+echo ""
+echo "[13/15] OC: DES shim protocol translation..."
+if [ -f "$SHIM" ]; then
+    HAS_TASK=$(grep -c "Agent" "$SHIM" || true)
+    HAS_WRITE=$(grep -c "pre-write" "$SHIM" || true)
+    HAS_DEGRADE=$(grep -c "5894\|degraded" "$SHIM" || true)
+    if [ "$HAS_TASK" -gt 0 ] && [ "$HAS_WRITE" -gt 0 ]; then
+        ((PASS++)); echo "  PASS: task→Agent, write→pre-write translation"
+    else
+        ((FAIL++)); echo "  FAIL: missing translation rules"
+    fi
+    if [ "$HAS_DEGRADE" -gt 0 ]; then
+        echo "    OK: degraded mode warning references #5894"
+    fi
+else
+    ((FAIL++)); echo "  FAIL: shim not found"
+fi
+
+# ──────────────────────────────────────────────
+# 14. NEW: DES shim manifest
+# ──────────────────────────────────────────────
+echo ""
+echo "[14/15] OC: DES shim manifest..."
+MANIFEST="$HOME/.config/opencode/.nwave-des-manifest.json"
+if [ -f "$MANIFEST" ]; then
+    ((PASS++)); echo "  PASS: manifest exists"
+    python3 -c "import json; m=json.load(open('$MANIFEST')); print(f'    version: {m.get(\"version\",\"?\")}')" 2>/dev/null
+else
+    ((FAIL++)); echo "  FAIL: manifest missing"
+fi
+
+# ──────────────────────────────────────────────
+# 15. Agent skill path format
+# ──────────────────────────────────────────────
+echo ""
+echo "[15/15] Agent skill paths..."
+if [ -f "$HOME/.claude/agents/nw/nw-software-crafter.md" ] && grep -q "nw-{skill-name}/SKILL.md" "$HOME/.claude/agents/nw/nw-software-crafter.md"; then
+    ((PASS++)); echo "  PASS: new format"
+else
+    ((WARN++)); echo "  WARN: cannot verify"
+fi
+
+# ──────────────────────────────────────────────
+echo ""
+echo "=============================================="
+echo "  Results: $PASS passed, $FAIL failed, $WARN warnings"
+echo "=============================================="
+if [ $FAIL -gt 0 ]; then echo "  STATUS: FAILED"; exit 1; else echo "  STATUS: PASSED"; exit 0; fi
+VERIFY
+RUN chmod +x /home/tester/verify.sh
+
+CMD ["/home/tester/verify.sh"]

@@ -22,6 +22,10 @@ from scripts.install.plugins.opencode_common import (
     parse_frontmatter,
     render_frontmatter,
 )
+from scripts.shared.install_paths import (
+    PYTHON_CMD_SUBSTITUTION,
+    resolve_python_command,
+)
 
 
 _MANIFEST_FILENAME = ".nwave-commands-manifest.json"
@@ -177,11 +181,19 @@ class OpenCodeCommandsPlugin(InstallationPlugin):
             installed_names = []
             installed_files = []
 
+            python_cmd = resolve_python_command()
+
             for source_file in command_files:
                 command_name = source_file.stem
                 content = source_file.read_text(encoding="utf-8")
 
                 transformed = _transform_command(content)
+
+                # Resolve Python command substitution at install time
+                if PYTHON_CMD_SUBSTITUTION in transformed:
+                    transformed = transformed.replace(
+                        PYTHON_CMD_SUBSTITUTION, python_cmd
+                    )
 
                 target_file = target_dir / f"{command_name}.md"
                 target_file.write_text(transformed, encoding="utf-8")
