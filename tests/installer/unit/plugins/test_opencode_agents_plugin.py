@@ -116,11 +116,11 @@ class TestParseToolsCsvToObject:
         """
         GIVEN: A tools value as CSV string "Read, Write, Edit"
         WHEN: _parse_tools() is called
-        THEN: Returns {"read": True, "write": True, "edit": True}
+        THEN: Returns {"read": "allow", "write": "allow", "edit": "allow"}
         """
         result = _parse_tools("Read, Write, Edit")
 
-        assert result == {"read": True, "write": True, "edit": True}
+        assert result == {"read": "allow", "write": "allow", "edit": "allow"}
 
 
 class TestParseToolsArrayToObject:
@@ -130,11 +130,11 @@ class TestParseToolsArrayToObject:
         """
         GIVEN: A tools value as list ["Read", "Glob", "Grep"]
         WHEN: _parse_tools() is called
-        THEN: Returns {"read": True, "glob": True, "grep": True}
+        THEN: Returns {"read": "allow", "glob": "allow", "grep": "allow"}
         """
         result = _parse_tools(["Read", "Glob", "Grep"])
 
-        assert result == {"read": True, "glob": True, "grep": True}
+        assert result == {"read": "allow", "glob": "allow", "grep": "allow"}
 
 
 class TestTransformRemovesNameAndModel:
@@ -389,15 +389,16 @@ class TestTransformAgentFullPipeline:
         assert frontmatter["mode"] == "subagent"
         assert frontmatter["steps"] == 50
         assert frontmatter["description"] == "DELIVER wave - Outside-In TDD"
-        assert frontmatter["tools"] == {
-            "read": True,
-            "write": True,
-            "edit": True,
-            "bash": True,
-            "glob": True,
-            "grep": True,
-            "task": True,
+        assert frontmatter["permission"] == {
+            "read": "allow",
+            "write": "allow",
+            "edit": "allow",
+            "bash": "allow",
+            "glob": "allow",
+            "grep": "allow",
+            "task": "allow",
         }
+        assert "tools" not in frontmatter
         assert "name" not in frontmatter
         assert "model" not in frontmatter
         assert "skills" not in frontmatter
@@ -410,16 +411,84 @@ class TestTransformAgentFullPipeline:
         """
         GIVEN: A full agent file with array-style tools format
         WHEN: _transform_agent() is called
-        THEN: Produces valid OpenCode format with tools as mapping
+        THEN: Produces valid OpenCode format with permission as mapping
         """
         result = _transform_agent(_ARRAY_TOOLS_AGENT)
 
         frontmatter, body = parse_frontmatter(result)
 
-        assert frontmatter["tools"] == {
-            "read": True,
-            "glob": True,
-            "grep": True,
+        assert frontmatter["permission"] == {
+            "read": "allow",
+            "glob": "allow",
+            "grep": "allow",
         }
+        assert "tools" not in frontmatter
         assert frontmatter["steps"] == 25
         assert "# nw-documentarist-reviewer" in body
+
+
+class TestOpenCodePermissionFormat:
+    """OpenCode agents must use 'permission: {tool: allow}' format, not 'tools: {tool: true}'.
+
+    OpenCode markdown agents require the 'permission' key with string values
+    ('allow', 'deny', 'ask'). The legacy 'tools' key with boolean values is
+    ignored in markdown frontmatter, causing Task tool invocation to fail with
+    TypeError: undefined is not an object (evaluating 'input.prompt').
+
+    See: docs/analysis/rca-opencode-task-tool-typeerror.md
+    """
+
+    def test_parse_tools_returns_allow_strings_not_booleans(self):
+        """
+        GIVEN: A tools value as CSV string "Read, Write, Task"
+        WHEN: _parse_tools() is called
+        THEN: Returns mapping with "allow" string values, not boolean True
+        """
+        result = _parse_tools("Read, Write, Task")
+
+        assert result == {"read": "allow", "write": "allow", "task": "allow"}
+        for tool_name, value in result.items():
+            assert isinstance(value, str), (
+                f"Permission for '{tool_name}' must be string 'allow', got {type(value).__name__}"
+            )
+
+    def test_transform_frontmatter_uses_permission_key_not_tools(self):
+        """
+        GIVEN: A frontmatter dict with tools: "Read, Write, Edit, Bash, Task"
+        WHEN: _transform_frontmatter() is called
+        THEN: Result has 'permission' key (not 'tools') with 'allow' string values
+        """
+        frontmatter = {
+            "name": "nw-software-crafter",
+            "description": "DELIVER wave",
+            "model": "inherit",
+            "tools": "Read, Write, Edit, Bash, Task",
+            "maxTurns": 50,
+        }
+
+        result = _transform_frontmatter(frontmatter)
+
+        assert "permission" in result, "Must use 'permission' key, not 'tools'"
+        assert "tools" not in result, "'tools' key must not be present in output"
+        assert result["permission"] == {
+            "read": "allow",
+            "write": "allow",
+            "edit": "allow",
+            "bash": "allow",
+            "task": "allow",
+        }
+
+    def test_task_permission_present_in_full_agent_transform(self):
+        """
+        GIVEN: A full agent file with tools including Task
+        WHEN: _transform_agent() is called
+        THEN: Output frontmatter has permission.task = "allow" (critical for sub-agent invocation)
+        """
+        result = _transform_agent(_CSV_TOOLS_AGENT)
+        frontmatter, _ = parse_frontmatter(result)
+
+        assert "permission" in frontmatter, "Must use 'permission' key"
+        assert "tools" not in frontmatter, "'tools' key must not be present"
+        assert frontmatter["permission"]["task"] == "allow", (
+            "Task permission must be 'allow' for sub-agent invocation"
+        )

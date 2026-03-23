@@ -259,3 +259,4 @@ DISCOVER → DISCUSS → DESIGN → DEVOPS → DISTILL → DELIVER
 - **No shell scripts**: Cross-platform policy enforced by pre-commit hook
 - **Coverage threshold**: 60% minimum (will fail CI if below)
 - **Ruff version pinned**: v0.15.0 — do not upgrade without updating CI and pre-commit
+- **Script distribution is whitelist-only**: Only scripts listed in `UTILITY_SCRIPTS` in `build_dist.py` are shipped to users. Everything else in `scripts/` stays in the repo. Check the whitelist before assuming a script will or won't be distributed.

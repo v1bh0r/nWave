@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-task'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
+            "command": "python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-task'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
           }
         ],
         "matcher": "Agent"
@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); echo \"$INPUT\" | grep -q 'execution-log\\.json' && { echo \"$INPUT\" | python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-write'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\"; exit $?; }; test -f .nwave/des/deliver-session.json || exit 0; echo \"$INPUT\" | python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-write'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
+            "command": "INPUT=$(cat); echo \"$INPUT\" | grep -q 'execution-log\\.json' && { echo \"$INPUT\" | python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-write'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\"; exit $?; }; test -f .nwave/des/deliver-session.json || exit 0; echo \"$INPUT\" | python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-write'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
           }
         ],
         "matcher": "Write"
@@ -23,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "INPUT=$(cat); echo \"$INPUT\" | grep -q 'execution-log\\.json' && { echo \"$INPUT\" | python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-edit'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\"; exit $?; }; test -f .nwave/des/deliver-session.json || exit 0; echo \"$INPUT\" | python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-edit'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
+            "command": "INPUT=$(cat); echo \"$INPUT\" | grep -q 'execution-log\\.json' && { echo \"$INPUT\" | python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-edit'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\"; exit $?; }; test -f .nwave/des/deliver-session.json || exit 0; echo \"$INPUT\" | python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','pre-edit'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
           }
         ],
         "matcher": "Edit"
@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','post-tool-use'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
+            "command": "python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','post-tool-use'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
           }
         ],
         "matcher": "Agent"
@@ -54,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','subagent-stop'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
+            "command": "python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','subagent-stop'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
           }
         ]
       },
@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','deliver-progress'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
+            "command": "python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','deliver-progress'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
           }
         ]
       }
@@ -72,7 +72,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','session-start'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
+            "command": "python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','session-start'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
           }
         ],
         "matcher": "startup"
@@ -83,7 +83,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -c \"import os,sys;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';p=p or next((str(s) for s in sorted(Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path.home()/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','subagent-start'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
+            "command": "python3 -c \"import os,sys,pwd;from pathlib import Path;r=os.environ.get('CLAUDE_PLUGIN_ROOT','');p=r+'/scripts' if r else '';h=os.environ.get('HOME') or '';h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;p=p or next((str(s) for s in sorted(Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts')) if (s/'des'/'__init__.py').exists()),None);p=p or str(Path(h)/'.claude/lib/python');sys.path.insert(0,p);sys.argv=['des-hook','subagent-start'];from des.adapters.drivers.hooks.claude_code_hook_adapter import main;main()\""
           }
         ]
       }

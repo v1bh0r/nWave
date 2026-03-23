@@ -373,3 +373,134 @@ class TestInstallCreatesManifest:
                 "tdd-methodology",
             ]
         )
+
+
+class TestInstallStripsForbiddenFields:
+    """ANOMALY-2: Skills with Claude Code-only frontmatter fields have them stripped."""
+
+    def test_install_strips_user_invocable_field(self, tmp_path, monkeypatch):
+        """
+        GIVEN: A skill with 'user-invocable: false' in frontmatter
+        WHEN: install() is called
+        THEN: The installed SKILL.md does NOT contain 'user-invocable'
+        """
+        context, skills_source, target = _make_context(tmp_path)
+        monkeypatch.setattr(
+            "scripts.install.plugins.opencode_skills_plugin._opencode_skills_dir",
+            lambda: target,
+        )
+
+        content = (
+            "---\n"
+            "name: tdd-methodology\n"
+            "description: Deep knowledge for Outside-In TDD\n"
+            "user-invocable: false\n"
+            "---\n"
+            "\n"
+            "# Outside-In TDD Methodology\n"
+        )
+        _create_skill(skills_source, "software-crafter", "tdd-methodology", content)
+
+        plugin = OpenCodeSkillsPlugin()
+        result = plugin.install(context)
+
+        assert result.success is True
+        installed_content = (target / "tdd-methodology" / "SKILL.md").read_text()
+        assert "user-invocable" not in installed_content
+        assert "name: tdd-methodology" in installed_content
+        assert "description: Deep knowledge for Outside-In TDD" in installed_content
+
+    def test_install_strips_disable_model_invocation_field(self, tmp_path, monkeypatch):
+        """
+        GIVEN: A skill with 'disable-model-invocation: true' in frontmatter
+        WHEN: install() is called
+        THEN: The installed SKILL.md does NOT contain 'disable-model-invocation'
+        """
+        context, skills_source, target = _make_context(tmp_path)
+        monkeypatch.setattr(
+            "scripts.install.plugins.opencode_skills_plugin._opencode_skills_dir",
+            lambda: target,
+        )
+
+        content = (
+            "---\n"
+            "name: quality-framework\n"
+            "description: Quality gates\n"
+            "disable-model-invocation: true\n"
+            "---\n"
+            "\n"
+            "# Quality Framework\n"
+        )
+        _create_skill(skills_source, "software-crafter", "quality-framework", content)
+
+        plugin = OpenCodeSkillsPlugin()
+        result = plugin.install(context)
+
+        assert result.success is True
+        installed_content = (target / "quality-framework" / "SKILL.md").read_text()
+        assert "disable-model-invocation" not in installed_content
+        assert "name: quality-framework" in installed_content
+
+    def test_install_strips_both_forbidden_fields(self, tmp_path, monkeypatch):
+        """
+        GIVEN: A skill with BOTH forbidden fields in frontmatter
+        WHEN: install() is called
+        THEN: Both fields are stripped; name and description preserved
+        """
+        context, skills_source, target = _make_context(tmp_path)
+        monkeypatch.setattr(
+            "scripts.install.plugins.opencode_skills_plugin._opencode_skills_dir",
+            lambda: target,
+        )
+
+        content = (
+            "---\n"
+            "name: fp-principles\n"
+            "description: Core FP thinking patterns\n"
+            "user-invocable: false\n"
+            "disable-model-invocation: true\n"
+            "---\n"
+            "\n"
+            "# FP Principles\n"
+        )
+        _create_skill(skills_source, "software-crafter", "fp-principles", content)
+
+        plugin = OpenCodeSkillsPlugin()
+        result = plugin.install(context)
+
+        assert result.success is True
+        installed_content = (target / "fp-principles" / "SKILL.md").read_text()
+        assert "user-invocable" not in installed_content
+        assert "disable-model-invocation" not in installed_content
+        assert "name: fp-principles" in installed_content
+        assert "description: Core FP thinking patterns" in installed_content
+
+    def test_install_preserves_essential_fields_when_no_forbidden_fields(
+        self, tmp_path, monkeypatch
+    ):
+        """
+        GIVEN: A skill with NO forbidden fields (only name and description)
+        WHEN: install() is called
+        THEN: Content is preserved unchanged
+        """
+        context, skills_source, target = _make_context(tmp_path)
+        monkeypatch.setattr(
+            "scripts.install.plugins.opencode_skills_plugin._opencode_skills_dir",
+            lambda: target,
+        )
+
+        content = (
+            "---\n"
+            "name: clean-skill\n"
+            "description: A skill without forbidden fields\n"
+            "---\n"
+            "\n"
+            "# Clean Skill\n"
+        )
+        _create_skill(skills_source, "software-crafter", "clean-skill", content)
+
+        plugin = OpenCodeSkillsPlugin()
+        plugin.install(context)
+
+        installed_content = (target / "clean-skill" / "SKILL.md").read_text()
+        assert installed_content == content

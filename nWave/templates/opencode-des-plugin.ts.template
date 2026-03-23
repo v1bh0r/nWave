@@ -12,7 +12,7 @@
  *   {{PYTHONPATH}}    -- path to DES lib (e.g., ~/.claude/lib/python)
  */
 
-import type { PluginContext } from "opencode";
+import type { Plugin } from "@opencode-ai/plugin";
 
 // Translation table: OpenCode tool name -> Claude Code format
 const TOOL_MAP: Record<string, { action: string; toolName: string }> = {
@@ -89,7 +89,7 @@ function emitDegradedModeWarning(): void {
   );
 }
 
-export default function nwaveDES(_ctx: PluginContext) {
+export default function nwaveDES(_ctx: Plugin) {
   return {
     "session.created": async (_event: Record<string, unknown>) => {
       // Emit degraded mode warning once per session
@@ -104,19 +104,9 @@ export default function nwaveDES(_ctx: PluginContext) {
       }
     },
 
-    "tool.execute.before": async (event: {
-      tool: string;
-      input: Record<string, unknown>;
-      is_subagent?: boolean;
-    }) => {
-      // Filter: skip sub-agent events (OpenCode limitation, Issue #5894)
-      if (event.is_subagent) {
-        emitDegradedModeWarning();
-        return;
-      }
-
+    "tool.execute.before": async (input: { tool: string; args: Record<string, unknown> }, output: Record<string, unknown>) => {
       // Filter: skip tools not relevant to DES
-      const translated = translateEvent(event.tool, event.input);
+      const translated = translateEvent(input.tool, output.args ?? {});
       if (!translated) return;
 
       try {

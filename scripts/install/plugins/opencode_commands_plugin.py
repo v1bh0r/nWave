@@ -26,11 +26,14 @@ from scripts.shared.install_paths import (
     PYTHON_CMD_SUBSTITUTION,
     resolve_python_command,
 )
+from scripts.shared.platform_contracts import (
+    OPENCODE_COMMAND_FORBIDDEN_FIELDS,
+    OPENCODE_PATH_REWRITE_EXCEPTIONS,
+    OPENCODE_PATH_REWRITES,
+)
 
 
 _MANIFEST_FILENAME = ".nwave-commands-manifest.json"
-
-_FIELDS_TO_REMOVE = {"argument-hint", "disable-model-invocation"}
 
 
 def _opencode_commands_dir() -> Path:
@@ -77,7 +80,9 @@ def _transform_frontmatter(frontmatter: dict) -> dict:
         New dict with OpenCode-compatible frontmatter
     """
     return {
-        key: value for key, value in frontmatter.items() if key not in _FIELDS_TO_REMOVE
+        key: value
+        for key, value in frontmatter.items()
+        if key not in OPENCODE_COMMAND_FORBIDDEN_FIELDS
     }
 
 
@@ -94,6 +99,60 @@ def _transform_command(content: str) -> str:
     transformed = _transform_frontmatter(frontmatter)
     rendered = render_frontmatter(transformed)
     return rendered + body
+
+
+def _is_exception_path(text_segment: str) -> bool:
+    """Check if a text segment contains an exception path that should not be rewritten.
+
+    Args:
+        text_segment: A portion of text surrounding a potential rewrite match
+
+    Returns:
+        True if the segment contains an exception path
+    """
+    return any(
+        exception in text_segment for exception in OPENCODE_PATH_REWRITE_EXCEPTIONS
+    )
+
+
+def _rewrite_paths(content: str) -> str:
+    """Rewrite Claude Code paths to OpenCode equivalents in command body text.
+
+    Applies path rewrite rules from platform_contracts.OPENCODE_PATH_REWRITES,
+    respecting exceptions from platform_contracts.OPENCODE_PATH_REWRITE_EXCEPTIONS.
+
+    Rules are applied in order. Exception paths (e.g. ~/.claude/lib/python) are
+    protected from rewriting by checking each match against the exceptions list.
+
+    Args:
+        content: Command file body text containing Claude Code paths
+
+    Returns:
+        Text with all non-exception paths rewritten to OpenCode equivalents
+    """
+    result = content
+    for claude_prefix, opencode_prefix in OPENCODE_PATH_REWRITES:
+        # Process each occurrence, skipping exceptions
+        new_result = []
+        remaining = result
+        while claude_prefix in remaining:
+            match_index = remaining.index(claude_prefix)
+            # Check if this match is part of an exception path
+            # Look at enough context after the match to check exceptions
+            context_end = min(match_index + 100, len(remaining))
+            context_segment = remaining[match_index:context_end]
+            if _is_exception_path(context_segment):
+                # Keep this occurrence as-is, skip past it
+                new_result.append(remaining[: match_index + len(claude_prefix)])
+                remaining = remaining[match_index + len(claude_prefix) :]
+            else:
+                # Rewrite this occurrence
+                new_result.append(remaining[:match_index])
+                new_result.append(opencode_prefix)
+                remaining = remaining[match_index + len(claude_prefix) :]
+        new_result.append(remaining)
+        result = "".join(new_result)
+    return result
 
 
 def _write_manifest(
@@ -188,6 +247,9 @@ class OpenCodeCommandsPlugin(InstallationPlugin):
                 content = source_file.read_text(encoding="utf-8")
 
                 transformed = _transform_command(content)
+
+                # Rewrite Claude Code paths to OpenCode equivalents
+                transformed = _rewrite_paths(transformed)
 
                 # Resolve Python command substitution at install time
                 if PYTHON_CMD_SUBSTITUTION in transformed:

@@ -4,6 +4,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+from scripts.install.attribution_utils import (
+    install_attribution_hook,
+    read_attribution_preference,
+    remove_attribution_hook,
+    write_attribution_preference,
+)
+
 
 def _get_version() -> str:
     """Get version from package metadata (installed) or __init__.py (dev)."""
@@ -34,9 +41,50 @@ def _run_script(script_name: str, args: list[str]) -> int:
         print("The nwave-ai package may not be installed correctly.", file=sys.stderr)
         return 1
 
-    cmd = [sys.executable, str(script_path)] + args
+    cmd = [sys.executable, str(script_path), *args]
     result = subprocess.run(cmd, cwd=str(project_root))
     return result.returncode
+
+
+def _get_config_dir() -> Path:
+    """Return the nWave config directory (~/.nwave/)."""
+    return Path.home() / ".nwave"
+
+
+def _handle_attribution(args: list[str]) -> int:
+    """Handle 'attribution on|off|status' subcommand."""
+    if not args:
+        print("Usage: nwave-ai attribution <on|off|status>", file=sys.stderr)
+        return 1
+
+    action = args[0].lower()
+    config_dir = _get_config_dir()
+
+    if action == "on":
+        write_attribution_preference(config_dir, enabled=True)
+        install_attribution_hook(config_dir)
+        print("Attribution enabled. Your commits will include the nWave credit line.")
+        return 0
+
+    if action == "off":
+        write_attribution_preference(config_dir, enabled=False)
+        remove_attribution_hook(config_dir)
+        print(
+            "Attribution disabled. Your commits will not include the nWave credit line."
+        )
+        return 0
+
+    if action == "status":
+        preference = read_attribution_preference(config_dir)
+        if preference is True:
+            print("Attribution is currently on.")
+        else:
+            print("Attribution is currently off.")
+        return 0
+
+    print(f"Unknown attribution action: {action}", file=sys.stderr)
+    print("Usage: nwave-ai attribution <on|off|status>", file=sys.stderr)
+    return 1
 
 
 def _print_usage() -> int:
@@ -46,9 +94,10 @@ def _print_usage() -> int:
     print("Usage: nwave-ai <command> [options]")
     print()
     print("Commands:")
-    print("  install     Install nWave framework to ~/.claude/")
-    print("  uninstall   Remove nWave framework from ~/.claude/")
-    print("  version     Show nwave-ai version")
+    print("  install        Install nWave framework to ~/.claude/")
+    print("  uninstall      Remove nWave framework from ~/.claude/")
+    print("  attribution    Toggle commit attribution (on/off/status)")
+    print("  version        Show nwave-ai version")
     print()
     print("Install options:")
     print("  --dry-run       Preview without making changes")
@@ -71,6 +120,8 @@ def main() -> int:
         return _run_script("install_nwave.py", sys.argv[2:])
     elif command == "uninstall":
         return _run_script("uninstall_nwave.py", sys.argv[2:])
+    elif command == "attribution":
+        return _handle_attribution(sys.argv[2:])
     elif command == "version":
         print(f"nwave-ai {_get_version()}")
         return 0

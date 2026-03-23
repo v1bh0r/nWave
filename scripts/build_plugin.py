@@ -472,14 +472,16 @@ def validate_python_syntax(content: str, filename: str) -> str | None:
 # Workaround: Python one-liner discovers plugin path via pathlib glob.
 # Priority: CLAUDE_PLUGIN_ROOT > plugin cache glob > CLI install path.
 _PLUGIN_DISCOVERY_SCRIPT = (
-    "import os,sys;"
+    "import os,sys,pwd;"
     "from pathlib import Path;"
     "r=os.environ.get('CLAUDE_PLUGIN_ROOT','');"
     "p=r+'/scripts' if r else '';"
+    "h=os.environ.get('HOME') or '';"
+    "h=h if len(h)>1 else pwd.getpwuid(os.getuid()).pw_dir;"
     "p=p or next((str(s) for s in sorted("
-    "Path.home().joinpath('.claude/plugins/cache').glob('*/nw/*/scripts'))"
+    "Path(h).joinpath('.claude/plugins/cache').glob('*/nw/*/scripts'))"
     " if (s/'des'/'__init__.py').exists()),None);"
-    "p=p or str(Path.home()/'.claude/lib/python');"
+    "p=p or str(Path(h)/'.claude/lib/python');"
     "sys.path.insert(0,p);"
     "sys.argv=['des-hook','{action}'];"
     "from des.adapters.drivers.hooks.claude_code_hook_adapter import main;"

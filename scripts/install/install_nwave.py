@@ -33,6 +33,7 @@ try:
     from scripts.install.installation_verifier import InstallationVerifier
     from scripts.install.output_formatter import format_error
     from scripts.install.plugins.agents_plugin import AgentsPlugin
+    from scripts.install.plugins.attribution_plugin import AttributionPlugin
     from scripts.install.plugins.base import InstallContext
     from scripts.install.plugins.commands_plugin import CommandsPlugin
     from scripts.install.plugins.des_plugin import DESPlugin
@@ -58,6 +59,7 @@ except ImportError:
     from installation_verifier import InstallationVerifier
     from output_formatter import format_error
     from plugins.agents_plugin import AgentsPlugin
+    from plugins.attribution_plugin import AttributionPlugin
     from plugins.base import InstallContext
     from plugins.commands_plugin import CommandsPlugin
     from plugins.des_plugin import DESPlugin
@@ -230,6 +232,7 @@ class NWaveInstaller:
         registry.register(SkillsPlugin())
         registry.register(UtilitiesPlugin())
         registry.register(DESPlugin())
+        registry.register(AttributionPlugin())
         # OpenCode plugins (registered when opencode detected)
         if target_platforms and "opencode" in target_platforms:
             opencode_skills = OpenCodeSkillsPlugin()

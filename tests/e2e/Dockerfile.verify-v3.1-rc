@@ -18,7 +18,7 @@ USER tester
 WORKDIR /home/tester
 
 # Install nwave-ai RC
-RUN pipx install "nwave-ai==3.1.0rc2"
+RUN pipx install "nwave-ai==3.1.1rc1"
 
 # Configure OpenCode
 RUN mkdir -p /home/tester/.config/opencode && \
@@ -31,8 +31,8 @@ FAIL=0
 WARN=0
 
 echo "=============================================="
-echo "  nWave v3.1.0rc2 Full Verification"
-echo "  Claude Code + OpenCode + DES Hooks"
+echo "  nWave v3.1.1rc1 Full Verification"
+echo "  Claude Code + OpenCode + DES + Issue #27"
 echo "=============================================="
 echo ""
 
@@ -209,6 +209,49 @@ if [ -f "$HOME/.claude/agents/nw/nw-software-crafter.md" ] && grep -q "nw-{skill
     ((PASS++)); echo "  PASS: new format"
 else
     ((WARN++)); echo "  WARN: cannot verify"
+fi
+
+# ──────────────────────────────────────────────
+echo ""
+echo "=============================================="
+echo "  Results: $PASS passed, $FAIL failed, $WARN warnings"
+echo "=============================================="
+# ──────────────────────────────────────────────
+# 16. NEW #27: OpenCode agents have rewritten skill paths
+# ──────────────────────────────────────────────
+echo ""
+echo "[16/17] #27: OpenCode agent skill paths rewritten..."
+OC_AGENT="$HOME/.config/opencode/agents/nw-software-crafter.md"
+if [ -f "$OC_AGENT" ]; then
+    if grep -q "~/.config/opencode/skills/" "$OC_AGENT"; then
+        HAS_CLAUDE_PATH=$(grep -c "~/.claude/skills/" "$OC_AGENT" || true)
+        if [ "$HAS_CLAUDE_PATH" -eq 0 ]; then
+            ((PASS++)); echo "  PASS: OpenCode agent uses ~/.config/opencode/skills/"
+        else
+            ((FAIL++)); echo "  FAIL: OpenCode agent still has ~/.claude/skills/ references"
+        fi
+    else
+        ((FAIL++)); echo "  FAIL: OpenCode agent missing ~/.config/opencode/skills/"
+    fi
+else
+    ((WARN++)); echo "  WARN: OC agent not found"
+fi
+
+# ──────────────────────────────────────────────
+# 17. NEW #27: Installed skills have resolved Python path
+# ──────────────────────────────────────────────
+echo ""
+echo "[17/17] #27: No command substitution in installed skills..."
+SUBST_COUNT=0
+for f in $(find "$HOME/.claude/skills" -name "SKILL.md" 2>/dev/null); do
+    if grep -q '$(command -v' "$f" 2>/dev/null; then
+        ((SUBST_COUNT++))
+    fi
+done
+if [ $SUBST_COUNT -eq 0 ]; then
+    ((PASS++)); echo "  PASS: No \$(command -v ...) in installed skills"
+else
+    ((FAIL++)); echo "  FAIL: $SUBST_COUNT skills still have command substitution"
 fi
 
 # ──────────────────────────────────────────────

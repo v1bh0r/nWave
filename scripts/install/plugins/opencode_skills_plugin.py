@@ -24,6 +24,7 @@ from scripts.install.plugins.base import (
     PluginResult,
 )
 from scripts.shared.agent_catalog import load_public_agents
+from scripts.shared.platform_contracts import OPENCODE_SKILL_FORBIDDEN_FIELDS
 from scripts.shared.skill_distribution import (
     SkillEntry,
     enumerate_skills,
@@ -138,6 +139,37 @@ def _rewrite_frontmatter_name(content: str, new_name: str) -> str:
         Content with the name: field updated
     """
     return _FRONTMATTER_NAME_PATTERN.sub(rf"\g<1>{new_name}", content, count=1)
+
+
+def _strip_forbidden_fields(content: str) -> str:
+    """Remove Claude Code-only frontmatter fields from skill content.
+
+    Strips YAML frontmatter fields listed in OPENCODE_SKILL_FORBIDDEN_FIELDS.
+    Only operates within the frontmatter block (between --- delimiters).
+    Body content is never modified.
+
+    Args:
+        content: Full skill file content with YAML frontmatter
+
+    Returns:
+        Content with forbidden fields removed from frontmatter
+    """
+    if not content.startswith("---"):
+        return content
+
+    end_index = content.index("---", 3)
+    frontmatter = content[4:end_index]
+    body = content[end_index:]
+
+    filtered_lines = [
+        line
+        for line in frontmatter.splitlines(keepends=True)
+        if not any(
+            line.startswith(f"{field}:") for field in OPENCODE_SKILL_FORBIDDEN_FIELDS
+        )
+    ]
+
+    return "---\n" + "".join(filtered_lines) + body
 
 
 def _write_manifest(
@@ -258,6 +290,7 @@ class OpenCodeSkillsPlugin(InstallationPlugin):
                 else:
                     source_file = entry.source_path
                 content = source_file.read_text(encoding="utf-8")
+                content = _strip_forbidden_fields(content)
                 if resolved_name != entry.name:
                     content = _rewrite_frontmatter_name(content, resolved_name)
                 target_file.write_text(content, encoding="utf-8")

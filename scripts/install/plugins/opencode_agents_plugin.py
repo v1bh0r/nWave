@@ -59,25 +59,29 @@ def _find_agents_source(context: InstallContext) -> Path | None:
     return None
 
 
-def _parse_tools(tools_value: str | list) -> dict[str, bool]:
-    """Normalize tools from CSV string or YAML array to a mapping.
+def _parse_tools(tools_value: str | list) -> dict[str, str]:
+    """Normalize tools from CSV string or YAML array to OpenCode permission mapping.
 
     Handles both formats:
         CSV:   "Read, Write, Edit, Bash"
         Array: ["Read", "Glob", "Grep"]
 
+    OpenCode markdown agents require permission values as strings ("allow",
+    "deny", "ask"), not booleans. The legacy boolean format is ignored in
+    markdown frontmatter.
+
     Args:
         tools_value: Tools specification as CSV string or list
 
     Returns:
-        Dict mapping lowercase tool names to True
+        Dict mapping lowercase tool names to "allow"
     """
     if isinstance(tools_value, list):
         tool_names = [str(tool).strip() for tool in tools_value]
     else:
         tool_names = [tool.strip() for tool in str(tools_value).split(",")]
 
-    return {name.lower(): True for name in tool_names if name}
+    return {name.lower(): "allow" for name in tool_names if name}
 
 
 def _transform_frontmatter(frontmatter: dict) -> dict:
@@ -107,7 +111,7 @@ def _transform_frontmatter(frontmatter: dict) -> dict:
     result["mode"] = "subagent"
 
     if "tools" in result:
-        result["tools"] = _parse_tools(result["tools"])
+        result["permission"] = _parse_tools(result.pop("tools"))
 
     return result
 
@@ -190,7 +194,7 @@ class OpenCodeAgentsPlugin(InstallationPlugin):
         - Removing name, model, skills fields
         - Renaming maxTurns to steps
         - Adding mode: subagent
-        - Converting tools to a YAML mapping with lowercase boolean keys
+        - Converting tools to permission mapping with "allow" string values
 
         A manifest tracks installed agents for safe uninstallation.
 
