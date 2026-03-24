@@ -46,6 +46,43 @@ def _run_script(script_name: str, args: list[str]) -> int:
     return result.returncode
 
 
+def _is_workspace_scope(args: list[str]) -> bool:
+    """Return True when args resolve to workspace scope (default)."""
+    scope = "workspace"
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--scope" and i + 1 < len(args):
+            scope = args[i + 1].strip().lower()
+            i += 2
+            continue
+        if arg.startswith("--scope="):
+            scope = arg.split("=", 1)[1].strip().lower()
+        i += 1
+    return scope == "workspace"
+
+
+def _has_explicit_target(args: list[str]) -> bool:
+    """Return True when --target is already provided."""
+    for arg in args:
+        if arg == "--target" or arg.startswith("--target="):
+            return True
+    return False
+
+
+def _with_default_workspace_target(args: list[str]) -> list[str]:
+    """Inject --target=<cwd> for workspace scope when target is omitted.
+
+    This preserves expected behavior when running 'nwave-ai copilot-*' from any
+    project directory even though scripts execute from the package root.
+    """
+    if _has_explicit_target(args):
+        return args
+    if not _is_workspace_scope(args):
+        return args
+    return [*args, f"--target={Path.cwd()}"]
+
+
 def _get_config_dir() -> Path:
     """Return the nWave config directory (~/.nwave/)."""
     return Path.home() / ".nwave"
@@ -139,11 +176,14 @@ def main() -> int:
     elif command == "uninstall":
         return _run_script("uninstall_nwave.py", sys.argv[2:])
     elif command == "copilot-install":
-        return _run_script("install_copilot_agents.py", ["install", *sys.argv[2:]])
+        copilot_args = _with_default_workspace_target(sys.argv[2:])
+        return _run_script("install_copilot_agents.py", ["install", *copilot_args])
     elif command == "copilot-uninstall":
-        return _run_script("install_copilot_agents.py", ["uninstall", *sys.argv[2:]])
+        copilot_args = _with_default_workspace_target(sys.argv[2:])
+        return _run_script("install_copilot_agents.py", ["uninstall", *copilot_args])
     elif command == "copilot-status":
-        return _run_script("install_copilot_agents.py", ["status", *sys.argv[2:]])
+        copilot_args = _with_default_workspace_target(sys.argv[2:])
+        return _run_script("install_copilot_agents.py", ["status", *copilot_args])
     elif command == "attribution":
         return _handle_attribution(sys.argv[2:])
     elif command == "version":
