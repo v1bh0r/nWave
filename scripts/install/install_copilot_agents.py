@@ -17,6 +17,7 @@ Usage:
 
 import argparse
 import json
+import re
 import shutil
 import sys
 import tarfile
@@ -314,6 +315,87 @@ def _print_next_steps(scope: str, target_github: Path, agent_count: int, prompt_
 
 
 # ---------------------------------------------------------------------------
+# Claude Code agent YAML healer
+# ---------------------------------------------------------------------------
+
+
+def _fix_description_yaml(content: str) -> str:
+    """Quote any unquoted `description:` value that would break YAML parsing.
+
+    The YAML spec rejects bare values containing ': ' (colon-space) sequences
+    such as those produced by Claude Code agent description fields with inline
+    examples like 'Examples: <example>Context: ...'.
+
+    This function wraps the raw value in double quotes and escapes any
+    existing double quotes inside the value.
+    """
+
+    def _quote(m: re.Match) -> str:
+        value = m.group(1)
+        if value.startswith('"') or value.startswith("'"):
+            return m.group(0)  # already quoted
+        value = value.replace('"', '\\"')
+        return f'description: "{value}"'
+
+    return re.sub(r"^description: (.+)$", _quote, content, flags=re.MULTILINE)
+
+
+def _heal_claude_agents_yaml(verbose: bool = False) -> int:
+    """Scan ~/.claude/agents/**/*.md and fix any YAML frontmatter parse errors.
+
+    Broken files have unquoted `description:` values containing colons that
+    confuse the YAML parser.  This function quotes those values in-place.
+
+    Returns:
+        Number of files that were actually repaired.
+    """
+    try:
+        import yaml  # noqa: PLC0415
+    except ImportError:
+        # PyYAML not available — skip silently, don't block installation
+        return 0
+
+    claude_agents_dir = Path.home() / ".claude" / "agents"
+    if not claude_agents_dir.exists():
+        return 0
+
+    repaired = 0
+    for md_file in sorted(claude_agents_dir.rglob("*.md")):
+        content = md_file.read_text(encoding="utf-8", errors="replace")
+        fm_match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
+        if fm_match is None:
+            continue
+
+        # Check if YAML is already valid
+        try:
+            yaml.safe_load(fm_match.group(1))
+            continue  # no problem, skip
+        except yaml.YAMLError:
+            pass
+
+        # Attempt repair
+        fixed = _fix_description_yaml(content)
+        fm_fixed = re.match(r"^---\n(.*?)\n---", fixed, re.DOTALL)
+        if fm_fixed is None:
+            continue
+
+        try:
+            yaml.safe_load(fm_fixed.group(1))
+        except yaml.YAMLError:
+            # Repair didn't help — leave the file alone
+            if verbose:
+                print(f"    ⚠  Could not auto-repair YAML in {md_file.name} — skipping")
+            continue
+
+        md_file.write_text(fixed, encoding="utf-8")
+        repaired += 1
+        if verbose:
+            print(f"    ✓  Repaired YAML in ~/.claude/agents/{md_file.relative_to(claude_agents_dir)}")
+
+    return repaired
+
+
+# ---------------------------------------------------------------------------
 # Install command
 # ---------------------------------------------------------------------------
 
@@ -428,6 +510,11 @@ def install(
     else:
         print(f"  ✅  Installed {len(installed_files)} files")
         _print_next_steps(scope, target_github, len(agents), len(prompts))
+
+        # Heal any broken YAML in ~/.claude/agents/ left by older Claude Code tooling
+        repaired = _heal_claude_agents_yaml(verbose=verbose)
+        if repaired:
+            print(f"  🔧  Repaired YAML frontmatter in {repaired} Claude Code agent(s) in ~/.claude/agents/")
 
     return 0
 
