@@ -549,7 +549,7 @@ Examples:
   python install_copilot_agents.py
 
   # Install the LATEST agents straight from GitHub
-  nwave-ai copilot-install --from-github=nwave-ai/nwave
+    nwave-ai copilot-install --from-github=v1bh0r/nWave
 
   # Install globally for all VS Code workspaces
   python install_copilot_agents.py --scope=global
@@ -615,7 +615,7 @@ Examples:
         help=(
             "Download the latest agents directly from a GitHub repository instead of using "
             "the bundled files. Accepts 'owner/repo', 'owner/repo@branch', or a full GitHub "
-            "URL (e.g. --from-github=nwave-ai/nwave). Requires internet access."
+            "URL (e.g. --from-github=v1bh0r/nWave). Requires internet access."
         ),
     )
 

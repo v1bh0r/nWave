@@ -120,7 +120,7 @@ def _print_usage() -> int:
     print("Examples:")
     print("  nwave-ai install")
     print("  nwave-ai copilot-install")
-    print("  nwave-ai copilot-install --from-github=nwave-ai/nwave")
+    print("  nwave-ai copilot-install --from-github=v1bh0r/nWave")
     print("  nwave-ai copilot-install --scope=global")
     print("  nwave-ai copilot-install --target=/path/to/my-project")
     print("  nwave-ai copilot-uninstall --scope=global")

@@ -111,21 +111,21 @@ nwave-ai copilot-install --scope=global
 Pull the newest agents from the GitHub repository without waiting for a PyPI release:
 
 ```bash
-# From the nWave public repo (latest main branch)
-nwave-ai copilot-install --from-github=nwave-ai/nwave
+# From this repo fork (latest main branch)
+nwave-ai copilot-install --from-github=v1bh0r/nWave
 
 # Specific branch
-nwave-ai copilot-install --from-github=nwave-ai/nwave@develop
+nwave-ai copilot-install --from-github=v1bh0r/nWave@develop
 
 # Full URL works too
-nwave-ai copilot-install --from-github=https://github.com/nwave-ai/nwave
+nwave-ai copilot-install --from-github=https://github.com/v1bh0r/nWave
 ```
 
 If `nwave-ai` is not yet installed, install it from GitHub first:
 
 ```bash
-pipx install git+https://github.com/nwave-ai/nwave.git
-nwave-ai copilot-install --from-github=nwave-ai/nwave
+pipx install git+https://github.com/v1bh0r/nWave.git
+nwave-ai copilot-install --from-github=v1bh0r/nWave
 ```
 
 > **Preview before committing**: add `--dry-run` to any install command to see which files would be written without touching your project.
@@ -144,7 +144,7 @@ Open GitHub Copilot Chat in VS Code (`Ctrl+Alt+I` / `Cmd+Option+I`), then:
 nwave-ai copilot-status
 
 # Upgrade to latest (re-run with --force to overwrite)
-nwave-ai copilot-install --from-github=nwave-ai/nwave --force
+nwave-ai copilot-install --from-github=v1bh0r/nWave --force
 
 # Remove from workspace
 nwave-ai copilot-uninstall
