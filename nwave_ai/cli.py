@@ -94,18 +94,36 @@ def _print_usage() -> int:
     print("Usage: nwave-ai <command> [options]")
     print()
     print("Commands:")
-    print("  install        Install nWave framework to ~/.claude/")
-    print("  uninstall      Remove nWave framework from ~/.claude/")
-    print("  attribution    Toggle commit attribution (on/off/status)")
-    print("  version        Show nwave-ai version")
+    print("  install              Install nWave framework to ~/.claude/")
+    print("  uninstall            Remove nWave framework from ~/.claude/")
+    print("  copilot-install      Install nWave Copilot agents/prompts (workspace or global)")
+    print("  copilot-uninstall    Remove nWave Copilot agents/prompts")
+    print("  copilot-status       Show Copilot agents installation status")
+    print("  attribution          Toggle commit attribution (on/off/status)")
+    print("  version              Show nwave-ai version")
     print()
     print("Install options:")
-    print("  --dry-run       Preview without making changes")
-    print("  --backup-only   Create backup only")
-    print("  --restore       Restore from backup")
+    print("  --dry-run            Preview without making changes")
+    print("  --backup-only        Create backup only")
+    print("  --restore            Restore from backup")
     print()
-    print("Example:")
+    print("Copilot install options:")
+    print("  --scope=workspace    Install into current workspace .github/ (default)")
+    print("  --scope=global       Install into ~/.github/ for all VS Code workspaces")
+    print("  --target=PATH        Explicit workspace root (workspace scope only)")
+    print("  --from-github=REPO   Download latest agents from GitHub; accepts")
+    print("                       'owner/repo', 'owner/repo@branch', or full URL")
+    print("  --dry-run            Preview without writing files")
+    print("  --verbose, -v        Print each file as it is installed")
+    print("  --force              Reinstall even if already installed")
+    print()
+    print("Examples:")
     print("  nwave-ai install")
+    print("  nwave-ai copilot-install")
+    print("  nwave-ai copilot-install --from-github=nwave-ai/nwave")
+    print("  nwave-ai copilot-install --scope=global")
+    print("  nwave-ai copilot-install --target=/path/to/my-project")
+    print("  nwave-ai copilot-uninstall --scope=global")
     return 0
 
 
@@ -120,6 +138,12 @@ def main() -> int:
         return _run_script("install_nwave.py", sys.argv[2:])
     elif command == "uninstall":
         return _run_script("uninstall_nwave.py", sys.argv[2:])
+    elif command == "copilot-install":
+        return _run_script("install_copilot_agents.py", ["install", *sys.argv[2:]])
+    elif command == "copilot-uninstall":
+        return _run_script("install_copilot_agents.py", ["uninstall", *sys.argv[2:]])
+    elif command == "copilot-status":
+        return _run_script("install_copilot_agents.py", ["status", *sys.argv[2:]])
     elif command == "attribution":
         return _handle_attribution(sys.argv[2:])
     elif command == "version":

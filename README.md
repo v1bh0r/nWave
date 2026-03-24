@@ -86,6 +86,73 @@ nwave-ai install
 - Some advanced subagent coordination may differ from Claude Code — use the core `/nw-discuss`, `/nw-design`, `/nw-distill`, `/nw-deliver` commands for best results
 - For full feature parity and support, Claude Code remains the primary environment
 
+### GitHub Copilot (VS Code)
+
+nWave agents and slash commands work inside **GitHub Copilot Chat** in VS Code. Install them into your workspace's `.github/` directory or globally for all workspaces.
+
+**Requirements:** VS Code with the GitHub Copilot extension installed and a Copilot subscription.
+
+#### Option A — Via PyPI (stable release)
+
+Install the `nwave-ai` package and run the Copilot installer:
+
+```bash
+pipx install nwave-ai
+
+# Install into the current workspace
+nwave-ai copilot-install
+
+# Or install globally (available in every VS Code workspace)
+nwave-ai copilot-install --scope=global
+```
+
+#### Option B — Latest agents directly from GitHub
+
+Pull the newest agents from the GitHub repository without waiting for a PyPI release:
+
+```bash
+# From the nWave public repo (latest main branch)
+nwave-ai copilot-install --from-github=nwave-ai/nwave
+
+# Specific branch
+nwave-ai copilot-install --from-github=nwave-ai/nwave@develop
+
+# Full URL works too
+nwave-ai copilot-install --from-github=https://github.com/nwave-ai/nwave
+```
+
+If `nwave-ai` is not yet installed, install it from GitHub first:
+
+```bash
+pipx install git+https://github.com/nwave-ai/nwave.git
+nwave-ai copilot-install --from-github=nwave-ai/nwave
+```
+
+> **Preview before committing**: add `--dry-run` to any install command to see which files would be written without touching your project.
+
+#### After installation
+
+Open GitHub Copilot Chat in VS Code (`Ctrl+Alt+I` / `Cmd+Option+I`), then:
+
+- Type `#agent:nw-` to browse available nWave agents
+- Type `/nw-` in the prompt input to browse slash commands
+
+#### Managing installations
+
+```bash
+# Show what is installed and where
+nwave-ai copilot-status
+
+# Upgrade to latest (re-run with --force to overwrite)
+nwave-ai copilot-install --from-github=nwave-ai/nwave --force
+
+# Remove from workspace
+nwave-ai copilot-uninstall
+
+# Remove from global scope
+nwave-ai copilot-uninstall --scope=global
+```
+
 ### Which method?
 
 | Scenario | Use | Why |

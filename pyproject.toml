@@ -16,6 +16,9 @@ packages = ["nwave_ai"]
 "nWave/README.md" = "nWave/README.md"
 "scripts" = "scripts"
 "src/des" = "src/des"
+".github/agents" = ".github/agents"
+".github/prompts" = ".github/prompts"
+".github/copilot-instructions.md" = ".github/copilot-instructions.md"
 
 [project]
 name = "nwave-ai"
