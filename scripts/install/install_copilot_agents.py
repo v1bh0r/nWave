@@ -32,6 +32,7 @@ _MANIFEST_FILENAME = ".nwave-copilot-manifest.json"
 _AGENTS_SUBDIR = "agents"
 _PROMPTS_SUBDIR = "prompts"
 _COPILOT_INSTRUCTIONS = "copilot-instructions.md"
+_SKILLS_DIR = Path("nWave") / "skills"
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +275,41 @@ def _copy_directory(
     return installed
 
 
+def _copy_skills_tree(
+    source_dir: Path,
+    target_dir: Path,
+    dry_run: bool,
+    verbose: bool,
+) -> list[str]:
+    """Recursively copy SKILL.md files from source_dir into target_dir.
+
+    Returns a list of destination file paths that were (or would be) installed.
+    """
+    if not source_dir.exists():
+        return []
+
+    skill_files = sorted(source_dir.rglob("SKILL.md"))
+    if not skill_files:
+        return []
+
+    count = len(skill_files)
+    print(f"  Skills ({count} files) → nWave/skills/")
+
+    installed: list[str] = []
+    for src in skill_files:
+        rel = src.relative_to(source_dir)
+        dst = target_dir / rel
+        if verbose or dry_run:
+            prefix = "    [dry-run] " if dry_run else "    "
+            print(f"{prefix}→ {rel}")
+        if not dry_run:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+        installed.append(str(dst))
+
+    return installed
+
+
 # ---------------------------------------------------------------------------
 # Version helper
 # ---------------------------------------------------------------------------
@@ -294,7 +330,7 @@ def _get_nwave_version() -> str:
 # ---------------------------------------------------------------------------
 
 
-def _print_next_steps(scope: str, target_github: Path, agent_count: int, prompt_count: int) -> None:
+def _print_next_steps(scope: str, target_github: Path, agent_count: int, prompt_count: int, skill_count: int) -> None:
     """Print post-installation guidance."""
     print()
     if scope == "workspace":
@@ -311,7 +347,8 @@ def _print_next_steps(scope: str, target_github: Path, agent_count: int, prompt_
     print()
     print(f"  Agents installed   : {agent_count}")
     print(f"  Prompts installed  : {prompt_count}")
-    print(f"  Location           : {target_github}")
+    print(f"  Skills installed   : {skill_count}")
+    print(f"  Location           : {target_github.parent}")
 
 
 # ---------------------------------------------------------------------------
@@ -481,6 +518,15 @@ def install(
     )
     installed_files.extend(prompts)
 
+    # --- Skills ---
+    skills = _copy_skills_tree(
+        source_dir=source_github.parent / _SKILLS_DIR,
+        target_dir=target_github.parent / _SKILLS_DIR,
+        dry_run=dry_run,
+        verbose=verbose,
+    )
+    installed_files.extend(skills)
+
     # --- copilot-instructions.md (workspace scope only — it's workspace-specific context) ---
     if scope == "workspace":
         src_instructions = source_github / _COPILOT_INSTRUCTIONS
@@ -509,7 +555,7 @@ def install(
         print(f"  [dry-run] Would install {len(installed_files)} files to {target_github}")
     else:
         print(f"  ✅  Installed {len(installed_files)} files")
-        _print_next_steps(scope, target_github, len(agents), len(prompts))
+        _print_next_steps(scope, target_github, len(agents), len(prompts), len(skills))
 
         # Heal any broken YAML in ~/.claude/agents/ left by older Claude Code tooling
         repaired = _heal_claude_agents_yaml(verbose=verbose)
@@ -609,12 +655,14 @@ def status(scope: str, target: Path | None) -> int:
     installed_at = manifest.get("installed_at", "unknown")
     agent_count = sum(1 for f in installed_files if f.endswith(".agent.md"))
     prompt_count = sum(1 for f in installed_files if f.endswith(".prompt.md"))
+    skill_count = sum(1 for f in installed_files if f.endswith("SKILL.md"))
 
     print(f"Installed  ({target_github})")
     print(f"  Version    : {version}")
     print(f"  Date       : {installed_at}")
     print(f"  Agents     : {agent_count}")
     print(f"  Prompts    : {prompt_count}")
+    print(f"  Skills     : {skill_count}")
     print(f"  Total files: {len(installed_files)}")
     return 0
 
